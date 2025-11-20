@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum InvoiceStatus {
+  UPLOADED
+  PROCESSING
+  EXTRACTED
+  NEEDS_REVIEW
+  SAVED
+  ERROR
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  status         InvoiceStatus @default(UPLOADED)
+  filePath       String        @map("file_path")
+  fileName       String        @map("file_name")
+  fileType       String        @map("file_type")
+  fileSize       Int           @map("file_size")
+
+  // Extracted fields
+  supplierName   String?       @map("supplier_name")
+  invoiceNumber  String?       @map("invoice_number")
+  invoiceDate    String?       @map("invoice_date")
+  dueDate        String?       @map("due_date")
+  currency       String        @default("USD")
+  subtotal       Float?
+  taxAmount      Float?        @map("tax_amount")
+  total          Float?
+
+  // Raw LLM response
+  rawLlmJson     Json?         @map("raw_llm_json")
+  llmProvider    String?       @map("llm_provider")
+  confidence     Float?        @default(0)
+
+  // Metadata
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  lineItems      LineItem[]
+
+  @@map("invoices")
+}
+
+model LineItem {
+  id          String   @id @default(cuid())
+  invoiceId   String   @map("invoice_id")
+  description String
+  quantity    Float
+  unitPrice   Float    @map("unit_price")
+  lineTotal   Float    @map("line_total")
+
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("line_items")
+}
